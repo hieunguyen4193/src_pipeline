@@ -1,0 +1,339 @@
+---
+title: "Quality control and downstream analysis"
+author:
+  - "trnguyen@ukaachen.de"
+date: "Last update on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float:
+      toc_collapsed: false
+    toc_depth: 3
+    number_sections: false
+    theme: lumen
+---
+  
+```{css zoom-lib-src, echo = FALSE}
+script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+```
+
+```{js zoom-jquery, echo = FALSE}
+$(document).ready(function() {
+  $('body').prepend('<div class=\"zoomDiv\"><img src=\"\" class=\"zoomImg\"></div>');
+  // onClick function for all plots (img's)
+    $('img:not(.zoomImg)').click(function() {
+      $('.zoomImg').attr('src', $(this).attr('src')).css({width: '100%'});
+      $('.zoomDiv').css({opacity: '1', width: 'auto', border: '1px solid white', borderRadius: '5px', position: 'fixed', top: '50%', left: '50%', marginRight: '-50%', transform: 'translate(-50%, -50%)', boxShadow: '0px 0px 50px #888888', zIndex: '50', overflow: 'auto', maxHeight: '100%'});
+    });
+    // onClick function for zoomImg
+    $('img.zoomImg').click(function() {
+      $('.zoomDiv').css({opacity: '0', width: '0%'}); 
+    });
+  });
+```
+
+
+```{r preparation, echo=FALSE, results='hide', include=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , message=FALSE}
+# _____INPUT THE PREPROCESSED SEURAT OBJECT FROM THE PIPELINE__________
+# gc()
+# rm(list = ls())
+
+set.seed(42)
+
+path.to.pipeline.src <- "/home/hieunguyen/CRC1382/src/single_cell_pipeline_23052023/scRNA_GEX_pipeline"
+
+source(file.path(path.to.pipeline.src, "processes_src", "import_libraries.R"))
+source(file.path(path.to.pipeline.src, "processes_src", "helper_functions.R"))
+
+####-----------------------------------------------------------------------#####
+#### INPUT ARGUMENTS FOR THE HTML REPORTS
+####-----------------------------------------------------------------------#####
+# analysis.round <- params$analysis.round
+# pct_mito <- params$pct_mito
+analysis.round <- "1st_round"
+pct_mito <- 25
+####-----------------------------------------------------------------------#####
+
+path.to.pipeline.output <- "/home/hieunguyen/CRC1382/src/single_cell_pipeline_23052023/OUTPUT"
+
+analysis.round <- "1st_round"
+pct.mito <- 10 
+PROJECT <- "test_pbmc10k"
+
+path.to.seurat.object <- file.path(path.to.pipeline.output, analysis.round, 
+                                   sprintf("pct_mito_%s_1", pct.mito),
+                                   "s8a_output",
+                                   sprintf("%s.output.s8a.rds", PROJECT))
+
+path.to.output <- file.path("/home/hieunguyen/CRC1382/src/single_cell_pipeline_23052023/OUTPUT", "data_analysis")
+path.to.01.output <- file.path(path.to.output, "01_output")
+dir.create(path.to.01.output, showWarnings = FALSE, recursive = TRUE)
+
+s.obj <- readRDS(path.to.seurat.object)
+```
+
+# Preprocessing and QC
+## Raw data Quality control  {.tabset}
+```{r, results = 'asis', echo = FALSE}
+for (plot.name in names(s.obj@misc$all.QC)){
+  
+  cat('###',plot.name,'{.unlisted .unnumbered} \n')
+  
+  ##### 
+  # plots or tables that we want to show in tabs
+  #####
+  print(s.obj@misc$all.QC[plot.name])
+  cat(' \n \n')
+  
+}
+
+```
+
+
+## Ambient RNA background correction 
+
+### DecontX clusters {.tabset}
+```{r, echo = FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , results='asis'}
+
+for (plot.name in names(s.obj@misc$ambient.cluster.RNA.plot)){
+  
+  cat('####',plot.name,'{.unlisted .unnumbered} \n')
+  
+  ##### 
+  # plots or tables that we want to show in tabs
+  #####
+  print(s.obj@misc$ambient.cluster.RNA.plot[plot.name])
+  cat(' \n \n')
+}
+```
+
+### Contamination level in each sample
+
+```{r}
+ggplot(s.obj@meta.data, aes(x=name, y=AmbientRNA)) + 
+  geom_boxplot()
+
+```
+
+
+### Ambient RNA contamination level {.tabset}
+
+```{r, results = 'asis', echo = FALSE}
+for (plot.name in names(s.obj@misc$ambient.contamination.plot)){
+  
+  cat('####',plot.name,'{.unlisted .unnumbered} \n')
+  
+  ##### 
+  # plots or tables that we want to show in tabs
+  #####
+  print(s.obj@misc$ambient.contamination.plot[plot.name])
+  cat(' \n \n')
+}
+```
+
+
+## Descriptive statistics and filtering threshold {.tabset}
+This section is devoted to the descriptive statistics of the following varialbes: `nFeature_RNA, nCount_RNA, percent.mt, percent.ribo`. 
+
+```{r, results = 'asis', echo = FALSE}
+for (plot.item in c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo")){
+  boxplot <- s.obj@meta.data %>% ggplot(aes_string(x = "name", y = plot.item)) +
+    geom_boxplot(outlier.colour="black", outlier.shape=16,
+                 outlier.size=2, notch=FALSE) +
+    ggtitle(sprintf("Boxplot: Distribution of %s in each dataset", plot.item))
+  cat('###', plot.item,'{.unlisted .unnumbered} \n')
+  
+  ##### 
+  # plots or tables that we want to show in tabs
+  #####
+  
+  print(boxplot)
+  
+  cat(' \n \n')
+}
+```
+
+## Descriptive statistics + UMAP {.tabset}
+
+### % Mitochondrial
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+FeaturePlot(object = s.obj, reduction = "RNA_UMAP", feature = "percent.mt", label.size = 6, label = TRUE, label.color = "red")
+```
+
+### % Ribosome
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+FeaturePlot(object = s.obj, reduction = "RNA_UMAP", feature = "percent.ribo", label = TRUE, label.color = "red", label.size = 6)
+```
+
+### % nCount RNA
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+FeaturePlot(object = s.obj, reduction = "RNA_UMAP", feature = "nCount_RNA", label = TRUE, label.color = "red", label.size = 6)
+```
+
+### % nGenes 
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+FeaturePlot(object = s.obj, reduction = "RNA_UMAP", feature = "nFeature_RNA", label = TRUE, label.color = "red" , label.size = 6)
+```
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+DimPlot(s.obj, reduction = "RNA_UMAP", split.by = "Phase")
+
+```
+
+# UMAP and clustering
+
+### One sample per plot {.tabset}
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+library(scales)
+colors <- hue_pal()(3)
+all.samples <- unique(s.obj$name)
+for (i in seq(1, length(unique(s.obj$name)))){
+  sample.id <- all.samples[[i]]
+  cat(sprintf("#### Sample: %s \n", sample.id))
+  c <- colors[[i]]
+  sample.cells <- colnames(subset(s.obj, name == sample.id))
+  names(sample.cells) <- sample.id
+  p <- DimPlot(object = s.obj, reduction = "RNA_UMAP", label = TRUE, label.box = TRUE, repel = TRUE, cells.highlight = sample.cells, cols.highlight = c, pt.size = 0.5)  + theme(legend.position = "none") + ggtitle(sample.id)
+  print(p)
+  cat("\n \n")
+}
+
+```
+
+## After integration
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+DimPlot(object = s.obj, reduction = "RNA_UMAP", label = TRUE, label.box = TRUE, repel = TRUE, group.by = "name")
+```
+
+### One sample per plot {.tabset}
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+library(scales)
+colors <- hue_pal()(3)
+all.samples <- unique(s.obj$name)
+for (i in seq(1, length(unique(s.obj$name)))){
+  sample.id <- all.samples[[i]]
+  cat(sprintf("#### Sample: %s \n", sample.id))
+  c <- colors[[i]]
+  sample.cells <- colnames(subset(s.obj, name == sample.id))
+  p <- DimPlot(object = s.obj, reduction = "RNA_UMAP", label = TRUE, label.box = TRUE, repel = TRUE, cells.highlight = sample.cells, cols.highlight = c, pt.size = 0.5) + theme(legend.position = "none") + ggtitle(sample.id)
+  print(p)
+  cat("\n \n")
+}
+
+```
+
+
+# Clusterings and cluster markers identification
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+DimPlot(object = s.obj, reduction = "RNA_UMAP", label = TRUE, label.box = TRUE)
+```
+
+## Cluster markers {.tabset}
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, }
+if (file.exists(file.path(path.to.01.output, "DE_cluster_marker_genes.rds")) == FALSE){
+  diff.cluster.markers <- FindAllMarkers(object = s.obj, assay = "RNA", test.use = "wilcox",)
+  diff.cluster.markers <- subset(diff.cluster.markers, diff.cluster.markers$p_val_adj < 0.05 & diff.cluster.markers$avg_log2FC > 0)
+  saveRDS(diff.cluster.markers, file.path(path.to.01.output, "DE_cluster_marker_genes.rds"))
+} else {
+  diff.cluster.markers <- readRDS(file.path(path.to.01.output, "DE_cluster_marker_genes.rds"))
+}
+
+dir.create(file.path(path.to.01.output, "cluster_marker_genes_tables"), showWarnings = FALSE)
+
+for (cluster.id in unique(diff.cluster.markers$cluster)){
+  tmp_table <- subset(diff.cluster.markers, diff.cluster.markers$cluster == cluster.id) %>%
+    rowwise %>%
+    mutate_if(is.numeric, round, 8) %>%
+    arrange(desc(avg_log2FC))
+  
+  writexl::write_xlsx(x = tmp_table, path = file.path(path.to.01.output, "cluster_marker_genes_tables", sprintf("cluster_%s.xlsx", cluster.id)))
+}
+```
+
+
+## All cluster marker genes table {.tabset}
+```{r results='hide', echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=8}
+diff.cluster.markers %>% create_dt()
+```
+
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=8}
+for (cluster.id in unique(diff.cluster.markers$cluster)){
+  tmp.table <- subset(diff.cluster.markers, diff.cluster.markers$cluster == cluster.id)
+  tmp.table <- tmp.table %>% mutate_if(is.numeric, round, 6)
+  row.names(tmp.table) <- NULL
+  cat(paste("\n\n### Cluster: ", cluster.id, "##\n"))
+  print( htmltools::tagList(datatable(tmp.table, extensions = 'Buttons',
+                filter = "top",
+                options = list(dom = 'Blfrtip',
+                               buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+                               lengthMenu = list(c(10,25,50,-1),
+                                                 c(10,25,50,"All")),
+                               columnDefs = list(list(
+                                 targets = "_all",
+                                 render = JS(
+                                   "function(data, type, row, meta) {",
+                                   "return type === 'display' && data != null && data.length > 100 ?",
+                                   "'<span title=\"' + data + '\">' + data.substr(0, 100) + '...</span>' : data;",
+                                   "}")
+                               ))
+                ))))
+  cat("\n \n")
+}
+```
+
+## Top-16 cluster markers feature plot {.tabset}
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , fig.width=12, fig.height=8}
+for (cluster.id in unique(diff.cluster.markers$cluster)){
+  DefaultAssay(s.obj) <- "RNA"
+  tmp <- subset(diff.cluster.markers, diff.cluster.markers$cluster == cluster.id & diff.cluster.markers$p_val_adj < 0.05) %>% 
+  rowwise %>% 
+  mutate_if(is.numeric, round, 6) %>% 
+  arrange(desc(avg_log2FC)) %>% head(16)
+  cat(sprintf("### Cluster %s \n", cluster.id))
+  p <- FeaturePlot(object = s.obj, reduction = "RNA_UMAP", features = tmp$gene, ncol = 4, ) 
+  print(p)
+  cat("\n \n")
+}
+```
+
+## Top-16 cluster markers dot plot {.tabset}
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , fig.width=12, fig.height=8}
+for (cluster.id in unique(diff.cluster.markers$cluster)){
+  DefaultAssay(s.obj) <- "RNA"
+  tmp <- subset(diff.cluster.markers, diff.cluster.markers$cluster == cluster.id & diff.cluster.markers$p_val_adj < 0.05) %>% 
+  rowwise %>% 
+  mutate_if(is.numeric, round, 6) %>% 
+  arrange(desc(avg_log2FC)) %>% head(16)
+  cat(sprintf("### Cluster %s \n", cluster.id))
+  p <- DotPlot(object = s.obj, features = tmp$gene) 
+  print(p)
+  cat("\n \n")
+}
+```
+
+## Top-16 cluster markers Violin plot {.tabset}
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , fig.width=12, fig.height=8}
+for (cluster.id in unique(diff.cluster.markers$cluster)){
+  DefaultAssay(s.obj) <- "RNA"
+  tmp <- subset(diff.cluster.markers, diff.cluster.markers$cluster == cluster.id & diff.cluster.markers$p_val_adj < 0.05) %>% 
+  rowwise %>% 
+  mutate_if(is.numeric, round, 6) %>% 
+  arrange(desc(avg_log2FC)) %>% head(16)
+  cat(sprintf("### Cluster %s \n", cluster.id))
+  p <- VlnPlot(object = s.obj, features = tmp$gene, pt.size = 0, ) 
+  print(p)
+  cat("\n \n")
+}
+```
+
+
+```{r results='asis', echo=FALSE, message=FALSE, warning=FALSE, fig.width = 14, fig.height = 10, , fig.width=25, fig.height=15}
+```
+
+
+
