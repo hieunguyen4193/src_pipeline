@@ -307,8 +307,8 @@ run_pipeline_GEX <- function(path2src,
                 append=TRUE)
         } else if (input.method == "readH5") {
           source(file.path(path2src, "s1_preprocessing_QC_readH5.R"))
-          s.obj <- s1.input.raw.data(path.to.h5.file = path.to.h5.file, 
-                                     path.to.h5.meta.data = path.to.h5.meta.data, 
+          s.obj <- s1.input.raw.data(path2input = path2input, 
+                                     stage_lst = stage_lst, 
                                      MINCELLS = MINCELLS, 
                                      MINGENES = MINGENES,
                                      PROJECT = PROJECT,
@@ -390,9 +390,7 @@ run_pipeline_GEX <- function(path2src,
                                      MINGENES = MINGENES,
                                      PROJECT = PROJECT,
                                      save.RDS.s1 = save.RDS[["s1"]],
-                                     path.to.output = path.to.output, 
-                                     path.to.anno.contigs = path.to.anno.contigs,
-                                     path.to.count.clonaltype = path.to.count.clonaltype)
+                                     path.to.output = path.to.output)
         } else if (input.method == "from_txt_new"){
           source(file.path(path2src, "s1_preprocessing_QC_from_txt.R"))
           s.obj <- s1.input.raw.data(path2input = path2input, 
@@ -401,9 +399,7 @@ run_pipeline_GEX <- function(path2src,
                                      MINGENES = MINGENES,
                                      PROJECT = PROJECT,
                                      save.RDS.s1 = save.RDS[["s1"]],
-                                     path.to.output = path.to.output, 
-                                     path.to.anno.contigs = path.to.anno.contigs,
-                                     path.to.count.clonaltype = path.to.count.clonaltype)
+                                     path.to.output = path.to.output)
         }
 
         status.message <- sprintf("New output is saved at %s", file.path(path.to.output, "s1_output", sprintf("%s.output.s1.rds", PROJECT)))

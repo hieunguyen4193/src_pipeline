@@ -6,10 +6,7 @@ s1.input.raw.data <- function(path2input,
                               MINGENES, 
                               PROJECT,
                               save.RDS.s1,
-                              path.to.output,
-                              path.to.anno.contigs,
-                              path.to.count.clonaltype,
-                              with.VDJ){
+                              path.to.output){
   #' Function to read in the raw input data. The data is assumed to have the 
   #' CellRanger output format. 
   #'
@@ -191,28 +188,6 @@ s1.input.raw.data <- function(path2input,
     saveRDS(object = s.obj, 
             file = file.path(path.to.output, "s1_output", 
                              paste0(PROJECT, ".output.s1.rds")))
-  }
-  
-  
-  if (with.VDJ == TRUE){
-    # __________ ADD CLONAL TYPE INFORMATION __________
-    if (is.null(path.to.anno.contigs) == FALSE){
-      anno.contigs <- read.csv(path.to.anno.contigs)
-      
-      count.clonaltype <- read.csv(path.to.count.clonaltype)
-      
-      anno.contigs <- anno.contigs %>% 
-        rowwise %>% 
-        mutate(barcode = sprintf("%s_%s", sample, tail(unlist(str_split(barcode, pattern = "_")), 1)))
-      
-      combined.metadata <- merge(slot(s.obj, "meta.data"), anno.contigs, 
-                                 by.x = 0, by.y = "barcode", all = TRUE)
-      
-      combined.metadata <- subset(combined.metadata, combined.metadata$Row.names %in% row.names(s.obj@meta.data))
-      
-      s.obj <- AddMetaData(object = s.obj, metadata = combined.metadata$CTaa,
-                           col.name = "CTaa")
-    }
   }
   
   return(s.obj)
