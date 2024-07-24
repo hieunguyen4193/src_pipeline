@@ -25,7 +25,7 @@ s1.input.raw.data <- function(path2input,
   all_exprs <- Sys.glob(file.path(path2input, "*.txt"))
   
   # assign folder names as name of the experiment data. 
-  names(all_exprs) <- to_vec(for(exprs in all_exprs) basename(exprs)) 
+  names(all_exprs) <- to_vec(for(exprs in all_exprs) str_replace(basename(exprs), ".txt", "")) 
   all_exprs <- all_exprs[names(stage_lst)]
   print(sprintf("Input data contains the following %s samples", length(all_exprs)))
   for (i in names(all_exprs)){
