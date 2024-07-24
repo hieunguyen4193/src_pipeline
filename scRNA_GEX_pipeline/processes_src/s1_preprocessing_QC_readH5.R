@@ -1,12 +1,15 @@
 
 # __________ Step 1: Input data, preprocessing and QC __________
-s1.input.raw.data <- function(path.to.h5.file,
-                              path.to.h5.meta.data,
+s1.input.raw.data <- function(path2input,
+                              stage_lst,
                               MINCELLS,
                               MINGENES, 
                               PROJECT,
                               save.RDS.s1,
-                              path.to.output){
+                              path.to.output,
+                              path.to.anno.contigs,
+                              path.to.count.clonaltype,
+                              with.VDJ){
   #' Function to read in the raw input data. The data is assumed to have the 
   #' CellRanger output format. 
   #'
@@ -20,22 +23,60 @@ s1.input.raw.data <- function(path.to.h5.file,
   #' What do we have in the ouptut of this process?
   #' - All QC plots are stored in the slot "misc" --> all.QC[[plot.name]]
   
-  input.data <- Read10X_h5(path.to.h5.file) 
-  meta.data <- read.csv(path.to.h5.meta.data) %>%
-      subset(select = c(X, lib_ID, lib, timepoint, celltype))
-    
-  s.obj <- CreateSeuratObject(counts = input.data, 
-                              min.cells = MINCELLS, 
-                              min.features = MINGENES,
-                              project = PROJECT)
-  s.obj.metadata <- s.obj@meta.data %>% rownames_to_column("barcode")
-  s.obj.metadata <- merge(s.obj.metadata, meta.data, by.x = "barcode", by.y = "X") 
   
-  s.obj[["name"]] <- PROJECT
-  s.obj[["stage"]] <- PROJECT
-  s.obj[["percent.mt"]] <- PercentageFeatureSet(s.obj, pattern = "^mt-|^MT-")
-  s.obj[["percent.ribo"]] <- PercentageFeatureSet(s.obj, pattern = "^Rpl|^Rps|^RPL|^RPS")
+  # Convert the traditional SEURAT object to my modified SEURAT object
+  all_exprs <- Sys.glob(file.path(path2input, "*.h5"))
+  
+  # assign folder names as name of the experiment data. 
+  names(all_exprs) <- to_vec(for(exprs in all_exprs) str_replace(basename(exprs), ".h5", "")) 
+  all_exprs <- all_exprs[names(stage_lst)]
+  print(sprintf("Input data contains the following %s samples", length(all_exprs)))
+  for (i in names(all_exprs)){
+    print(sprintf("%s, path: %s", i, all_exprs[[i]]))
+  }
+  # print(paste0("Number of scRNA experiments in this dataset: ", length(all_exprs)))
+  
+  data.list = list() # a list containing all experiment data. 
+  
+  for (i in seq_along(all_exprs)){
+    path_to_expr <- all_exprs[i]
+    input.data <- Read10X_h5(path_to_expr) 
+    expr.name <- names(all_exprs)[i]
     
+    s.obj <- CreateSeuratObject(counts = input.data , 
+                                min.cells = MINCELLS, 
+                                min.features = MINGENES, 
+                                project = PROJECT)
+    
+    s.obj@meta.data[, "name"] <- expr.name
+    s.obj@meta.data[, "stage"] <- stage_lst[expr.name]
+    
+    # estimate the percentage of mapped reads to Mitochondrial and Ribosome genes
+    s.obj[["percent.mt"]] <- PercentageFeatureSet(s.obj, 
+                                                  pattern = "^mt-|^MT-")
+    s.obj[["percent.ribo"]] <- PercentageFeatureSet(s.obj, 
+                                                    pattern = "^Rpl|^Rps|^RPL|^RPS")
+    data.list[[i]] <- s.obj
+    
+    # clean up
+    rm(s.obj)
+  }
+  
+  s.obj <- data.list[[1]]
+  
+  if(length(data.list) > 1){
+    # if there are more than 1 experiment, merge them all into 1 single object. 
+    s.obj <- merge(x = data.list[[1]], 
+                   y = unlist(data.list[2:length(data.list)]),
+                   merge.data = FALSE, 
+                   add.cell.ids = names(all_exprs), 
+                   project = PROJECT)
+  }
+  s.obj[["No.Exprs"]] <- length(all_exprs)
+  
+  s.obj@tools[["meta_order"]] <- list(name = names(all_exprs), 
+                                      stage=unique(stage_lst))
+  
   all.QC <- list()
   
   # Number of cells obtained per experiment/sample
@@ -61,7 +102,7 @@ s1.input.raw.data <- function(path.to.h5.file,
   
   # distribution of number of features (genes detected) in each sample
   all.QC$nFeature_RNA.distribution <- ggplot(s.obj@meta.data,
-                                             aes(color=name, x=nFeature_RNA, fill = name)) + 
+                                             aes(color=name, x=nFeature_RNA, fill = name, y = ..scaled..)) + 
     geom_density(alpha = 0.2) +
     scale_x_log10() +
     theme_classic() +
@@ -135,6 +176,28 @@ s1.input.raw.data <- function(path.to.h5.file,
     saveRDS(object = s.obj, 
             file = file.path(path.to.output, "s1_output", 
                              paste0(PROJECT, ".output.s1.rds")))
+  }
+  
+  
+  if (with.VDJ == TRUE){
+    # __________ ADD CLONAL TYPE INFORMATION __________
+    if (is.null(path.to.anno.contigs) == FALSE){
+      anno.contigs <- read.csv(path.to.anno.contigs)
+      
+      count.clonaltype <- read.csv(path.to.count.clonaltype)
+      
+      anno.contigs <- anno.contigs %>% 
+        rowwise %>% 
+        mutate(barcode = sprintf("%s_%s", sample, tail(unlist(str_split(barcode, pattern = "_")), 1)))
+      
+      combined.metadata <- merge(slot(s.obj, "meta.data"), anno.contigs, 
+                                 by.x = 0, by.y = "barcode", all = TRUE)
+      
+      combined.metadata <- subset(combined.metadata, combined.metadata$Row.names %in% row.names(s.obj@meta.data))
+      
+      s.obj <- AddMetaData(object = s.obj, metadata = combined.metadata$CTaa,
+                           col.name = "CTaa")
+    }
   }
   
   return(s.obj)
