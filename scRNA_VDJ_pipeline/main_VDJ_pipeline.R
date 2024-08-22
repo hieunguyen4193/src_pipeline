@@ -56,8 +56,7 @@ summarize_vdj_data <- function(path.to.input,
                                    samples = sample.names,
                                    ID = sample.names,
                                    removeNA = removeNA,
-                                   removeMulti = removeMulti,
-                                   cells = "T-AB")
+                                   removeMulti = removeMulti)
   } else if (T_or_B == "B"){
     combined.contigs <- combineBCR(contig_list,
                                    samples = sample.names,
