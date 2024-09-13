@@ -6,7 +6,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
                                              num.PC.used.in.UMAP,
                                              num.PC.used.in.Clustering,
                                              cluster.resolution,
-                                             vars.to.regress = c("percent.mt")
+                                             vars.to.regress = c("percent.mt"),
+                                             integration.methods = "all"
                                              ){
   s.obj[["RNA"]] <- split(s.obj[["RNA"]], f = s.obj$name)
   DefaultAssay(s.obj) <- "RNA"
@@ -24,43 +25,59 @@ s8.integration.and.clustering_V5 <- function(s.obj,
   s.obj <- RunPCA(s.obj, npcs = num.PCA, verbose = TRUE, reduction.name = "RNA_PCA")  
   s.obj <- RunUMAP(s.obj, dims = 1:num.PC.used.in.UMAP, reduction = "RNA_PCA", reduction.name = "umap.unintegrated")  
   print("UMAP finished")
+  
+  if (integration.methods == "all"){
+    print("Start integration with CCA ...")
+    s.obj <- IntegrateLayers( 
+      object = s.obj,
+      method = CCAIntegration,
+      orig.reduction = "RNA_PCA",
+      new.reduction = "integrated.cca",
+      verbose = TRUE,
+      normalization.method = normalization.method
+    )
+    
+    print("Start integration with RPCA ...")
+    s.obj <- IntegrateLayers(
+      object = s.obj, 
+      method = RPCAIntegration,
+      orig.reduction = "RNA_PCA", 
+      new.reduction = "integrated.rpca", 
+      verbose = TRUE, 
+      normalization.method = normalization.method
+    )
+    
+    print("Start integration with Harmony ...")
+    s.obj <- IntegrateLayers(
+      object = s.obj, 
+      method = HarmonyIntegration,
+      orig.reduction = "RNA_PCA", 
+      new.reduction = "harmony",
+      verbose = TRUE, 
+      normalization.method = normalization.method
+    )
+    
+    print("finished all integrations.")
+    all.reductions <- c(
+      "integrated.cca",
+      "integrated.rpca",
+      "harmony"
+    )
+  } else if (integration.methods == "CCA"){
+    print("Start integration with CCA ...")
+    s.obj <- IntegrateLayers( 
+      object = s.obj,
+      method = CCAIntegration,
+      orig.reduction = "RNA_PCA",
+      new.reduction = "integrated.cca",
+      verbose = TRUE,
+      normalization.method = normalization.method
+    )
+    all.reductions <- c(
+      "integrated.cca"
+    )
+  }
 
-  print("Start integration with CCA ...")
-  s.obj <- IntegrateLayers( 
-    object = s.obj,
-    method = CCAIntegration,
-    orig.reduction = "RNA_PCA",
-    new.reduction = "integrated.cca",
-    verbose = TRUE,
-    normalization.method = normalization.method
-  )
-  
-  print("Start integration with RPCA ...")
-  s.obj <- IntegrateLayers(
-    object = s.obj, 
-    method = RPCAIntegration,
-    orig.reduction = "RNA_PCA", 
-    new.reduction = "integrated.rpca", 
-    verbose = TRUE, 
-    normalization.method = normalization.method
-  )
-  
-  print("Start integration with Harmony ...")
-  s.obj <- IntegrateLayers(
-    object = s.obj, 
-    method = HarmonyIntegration,
-    orig.reduction = "RNA_PCA", 
-    new.reduction = "harmony",
-    verbose = TRUE, 
-    normalization.method = normalization.method
-  )
-  
-  print("finished all integrations.")
-  all.reductions <- c(
-    "integrated.cca",
-    "integrated.rpca",
-    "harmony"
-  )
   
   for (selected.reduction in all.reductions){
     new.reduction.name <- str_replace(selected.reduction, "integrated.", "")
