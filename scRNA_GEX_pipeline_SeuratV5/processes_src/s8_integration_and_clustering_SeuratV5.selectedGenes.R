@@ -82,6 +82,7 @@ s8.integration.and.clustering_V5 <- function(s.obj,
   s.obj <- JoinLayers(s.obj)
   DefaultAssay(s.obj) <- "SCT"
   
+  s.obj$seurat_clusters <- NULL
   if (save.RDS.s8 == TRUE){
     dir.create(file.path(path.to.output, "s8_output"), showWarnings = FALSE)
     saveRDS(object = s.obj, 
