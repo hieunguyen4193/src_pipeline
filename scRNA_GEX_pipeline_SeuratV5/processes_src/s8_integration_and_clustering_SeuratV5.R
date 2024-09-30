@@ -8,7 +8,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
                                              cluster.resolution,
                                              PROJECT,
                                              vars.to.regress = c("percent.mt"),
-                                             integration.methods = "all"
+                                             integration.methods = "all",
+                                             k.weight = 100
                                              ){
   s.obj[["RNA"]] <- split(s.obj[["RNA"]], f = s.obj$name)
   DefaultAssay(s.obj) <- "RNA"
@@ -35,7 +36,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
       orig.reduction = "RNA_PCA",
       new.reduction = "integrated.cca",
       verbose = TRUE,
-      normalization.method = normalization.method
+      normalization.method = normalization.method,
+      k.weight = k.weight
     )
     
     print("Start integration with RPCA ...")
@@ -45,7 +47,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
       orig.reduction = "RNA_PCA", 
       new.reduction = "integrated.rpca", 
       verbose = TRUE, 
-      normalization.method = normalization.method
+      normalization.method = normalization.method,
+      k.weight = k.weight
     )
     
     print("Start integration with Harmony ...")
@@ -55,7 +58,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
       orig.reduction = "RNA_PCA", 
       new.reduction = "harmony",
       verbose = TRUE, 
-      normalization.method = normalization.method
+      normalization.method = normalization.method,
+      k.weight = k.weight
     )
     
     print("finished all integrations.")
@@ -72,7 +76,8 @@ s8.integration.and.clustering_V5 <- function(s.obj,
       orig.reduction = "RNA_PCA",
       new.reduction = "integrated.cca",
       verbose = TRUE,
-      normalization.method = normalization.method
+      normalization.method = normalization.method,
+      k.weight = k.weight
     )
     all.reductions <- c(
       "integrated.cca"

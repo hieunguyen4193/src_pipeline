@@ -22,7 +22,11 @@ s8.integration.and.clustering_V5 <- function(s.obj,
   }
   if (is.null(remove.genes) == FALSE){
     ##### remove the removed genes from the variable features, e.g TCR or BCR genes.
-    s.obj <- RunPCA(s.obj, npcs = num.PCA, verbose = TRUE, reduction.name = "RNA_PCA", features = setdiff(VariableFeatures(s.obj), remove.genes))  
+    s.obj <- RunPCA(s.obj, 
+                    npcs = num.PCA, 
+                    verbose = TRUE, 
+                    reduction.name = "RNA_PCA", 
+                    features = setdiff(VariableFeatures(s.obj), remove.genes))  
   } else {
     s.obj <- RunPCA(s.obj, npcs = num.PCA, verbose = TRUE, reduction.name = "RNA_PCA")      
   }
