@@ -7,9 +7,6 @@ s1.input.raw.data <- function(path2input,
                               PROJECT,
                               save.RDS.s1,
                               path.to.output,
-                              path.to.anno.contigs,
-                              path.to.count.clonaltype,
-                              with.VDJ,
                               remove.genes = NULL){
   #' Function to read in the raw input data. The data is assumed to have the 
   #' CellRanger output format. 
