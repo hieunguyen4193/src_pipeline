@@ -74,7 +74,8 @@ run_pipeline_GEX <- function(path2src,
                          path.to.h5.meta.data = NULL,
                          with.TSNE = FALSE,
                          k.filter = 200,
-                         sw = NULL){
+                         sw = NULL,
+                         remove.genes = NULL){
   
   # load renv.lock file
   # require(renv)
@@ -400,6 +401,16 @@ run_pipeline_GEX <- function(path2src,
                                      PROJECT = PROJECT,
                                      save.RDS.s1 = save.RDS[["s1"]],
                                      path.to.output = path.to.output)
+        } else if (input.method == "remove_selected_genes") {
+          source(file.path(path2src, "s1_preprocessing_QC_remove_genes.R"))
+          s.obj <- s1.input.raw.data(path2input = path2input,
+                                     stage_lst = stage_lst,
+                                     MINCELLS = MINCELLS,
+                                     MINGENES = MINGENES, 
+                                     PROJECT = PROJECT,
+                                     save.RDS.s1 = save.RDS[["s1"]],
+                                     path.to.output = path.to.output,
+                                     remove.genes = remove.genes)
         }
 
         status.message <- sprintf("New output is saved at %s", file.path(path.to.output, "s1_output", sprintf("%s.output.s1.rds", PROJECT)))
