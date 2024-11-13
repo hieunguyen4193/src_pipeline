@@ -384,6 +384,15 @@ run_pipeline_GEX <- function(path2src,
                                      path.to.anno.contigs = path.to.anno.contigs,
                                      path.to.count.clonaltype = path.to.count.clonaltype,
                                      filtered.barcodes = filtered.barcodes)
+        } else if (input.method == "from_rds"){
+          source(file.path(path2src, "s1_preprocessing_QC_from_rds.R"))
+          s.obj <- s1.input.raw.data(path2input = path2input, 
+                                     stage_lst = stage_lst, 
+                                     MINCELLS = MINCELLS, 
+                                     MINGENES = MINGENES,
+                                     PROJECT = PROJECT,
+                                     save.RDS.s1 = save.RDS[["s1"]],
+                                     path.to.output = path.to.output)
         }
 
         status.message <- sprintf("New output is saved at %s", file.path(path.to.output, "s1_output", sprintf("%s.output.s1.rds", PROJECT)))
