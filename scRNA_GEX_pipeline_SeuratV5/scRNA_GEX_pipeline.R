@@ -594,6 +594,7 @@ run_pipeline_GEX <- function(path2src,
                                                 num.PC.used.in.UMAP,
                                                 num.PC.used.in.Clustering,
                                                 cluster.resolution,
+                                                PROJECT,
                                                 vars.to.regress)
       status.message <- sprintf("New output is saved at %s", file.path(path.to.output, "s8_output", sprintf("%s.output.s8.rds", PROJECT)))
       
