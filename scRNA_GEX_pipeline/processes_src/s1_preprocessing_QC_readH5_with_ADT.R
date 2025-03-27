@@ -25,7 +25,7 @@ s1.input.raw.data <- function(path2input,
   all_exprs <- Sys.glob(file.path(path2input, "*.h5"))
   
   # assign folder names as name of the experiment data. 
-  names(all_exprs) <- to_vec(for(exprs in all_exprs) str_replace(basename(exprs), ".h5", "")) 
+  names(all_exprs) <- to_vec(for(exprs in all_exprs) basename(dirname(exprs))) 
   all_exprs <- all_exprs[names(stage_lst)]
   print(sprintf("Input data contains the following %s samples", length(all_exprs)))
   for (i in names(all_exprs)){
@@ -68,7 +68,7 @@ s1.input.raw.data <- function(path2input,
     data.list[[i]] <- s.obj
     
     # clean up
-    rm(s.obj)s
+    rm(s.obj)
   }
   
   s.obj <- data.list[[1]]
